@@ -19,7 +19,8 @@ private:
 
 class GridRenderer3D{
 public:
-    GridRenderer3D(int cellSize = DEFAULT_CELL_SIZE) : _cellSize(cellSize) {}
+    GridRenderer3D(int cellSize = DEFAULT_CELL_SIZE, Color _activeColor = BLACK);
+    ~GridRenderer3D();
 
     void Draw(const Grid3D& grid);
     void DrawGridLines(int gridSize);
@@ -28,5 +29,8 @@ public:
     int GetCellSize() const { return _cellSize; }
 
 private:
+    Material _cubeMaterial;
+    Mesh _cubeMesh;
     uint32_t _cellSize;
+    std::vector<Matrix> _transforms;
 };

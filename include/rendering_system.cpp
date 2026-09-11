@@ -1,5 +1,6 @@
 #include "rendering_system.hpp"
-
+#include "raymath.h"
+#include "rlgl.h"
 /*
     ,_______,\--------\
     \_\   | | \ _____\ \
@@ -50,24 +51,105 @@ void GridRenderer2D::DrawGridLines(int gridSize){
       \_________/    \_________/
 */
 
+static const char* INSTANCING_VS = R"(
+    #version 330
+
+    // Vertex attributes
+    in vec3 vertexPosition;
+    in vec2 vertexTexCoord;
+    in vec3 vertexNormal;
+    in vec4 vertexColor;
+
+    // Instancing attribute (4x4 matrix split across 4 vec4 attributes)
+    in mat4 instanceTransform;
+
+    // Input uniforms
+    uniform mat4 mvp;
+    uniform mat4 matNormal;
+
+    // Output to fragment shader
+    out vec3 fragPosition;
+    out vec2 fragTexCoord;
+    out vec4 fragColor;
+    out vec3 fragNormal;
+
+    void main()
+    {
+        // Compute vertex position using the per-instance matrix
+        vec4 worldPosition = instanceTransform * vec4(vertexPosition, 1.0);
+        
+        fragPosition = vec3(worldPosition);
+        fragTexCoord = vertexTexCoord;
+        fragColor = vertexColor;
+        fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 0.0)));
+
+        // Final object transform
+        gl_Position = mvp * worldPosition;
+    }
+)";
+
+GridRenderer3D::GridRenderer3D(int cellSize, Color _activeColor) {
+    _cellSize = cellSize;
+    _cubeMesh = GenMeshCube(1.0, 1.0, 1.0);
+
+    _cubeMaterial = LoadMaterialDefault();
+    _cubeMaterial.maps[MATERIAL_MAP_DIFFUSE].color = _activeColor;
+
+    Shader instanceShader = LoadShaderFromMemory(INSTANCING_VS, nullptr);
+    instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
+    instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
+    _cubeMaterial.shader = instanceShader;
+
+    _transforms.reserve(50000);
+}
+
+GridRenderer3D::~GridRenderer3D(){
+    UnloadMesh(_cubeMesh);
+    UnloadShader(_cubeMaterial.shader);
+}
+
 void GridRenderer3D::Draw(const Grid3D& grid){
     uint32_t size = (uint32_t)grid.GetSize();
-
-    ClearBackground(RAYWHITE);
-    for(int z = 0; z < size; z++){
-        for(uint32_t y = 0; y < size; y++){
-            for(uint32_t x = 0; x < size; x++){
-                if(grid.GetCell(x, y, z) == 1){
-                    // Center offset of 0.5 cause of the way origin (0,0,0) exists and the way that raylib draws its cubes. Too lazy to explaiin it right now cause it would take a lot of typing
+    float floatCellSize = static_cast<float>(_cellSize);
+    float halfCellSize = floatCellSize * 0.5F;
+    _transforms.clear();
+    for (uint32_t z = 0; z < size; ++z) {
+        for (uint32_t y = 0; y < size; ++y) {
+            for (uint32_t x = 0; x < size; ++x) {
+                if (grid.GetCell(x, y, z) == 1) {
                     Vector3 pos = {
-                        ( x + 0.5)* _cellSize,
-                        ( y + 0.5) * _cellSize,
-                        ( z + 0.5) * _cellSize
+                        x * floatCellSize + halfCellSize,
+                        y * floatCellSize + halfCellSize,
+                        z * floatCellSize + halfCellSize
                     };
-                    DrawCube(pos, _cellSize, _cellSize, _cellSize, BLACK);
+                    // Scale and translate the base cube to match the correct coords in the 3d space
+                    Matrix transform = MatrixMultiply(
+                        MatrixScale(floatCellSize, floatCellSize, floatCellSize),
+                        MatrixTranslate(pos.x, pos.y, pos.z)
+                    );
+                    _transforms.push_back(transform);
                 }
             }
         }
     }
 
+    if(!_transforms.empty()){
+        DrawMeshInstanced(_cubeMesh, _cubeMaterial, _transforms.data(), static_cast<int>(_transforms.size()));
+    }
+
+    DrawGridLines(size);
+}
+
+void GridRenderer3D::DrawGridLines(int gridSize){
+    float totalSize = gridSize * static_cast<float>(_cellSize);
+    Vector3 boxCenter = { totalSize * 0.5f, totalSize * 0.5f, totalSize * 0.5f };
+    DrawCubeWires(boxCenter, totalSize, totalSize, totalSize, DARKGRAY);
+
+    rlPushMatrix();
+        // Move the drawing origin to the center of the bottom face
+        rlTranslatef(totalSize * 0.5f, 0.0f, totalSize * 0.5f);
+        
+        // Draw grid matching grid dimensions
+        DrawGrid(gridSize, static_cast<float>(_cellSize));
+    rlPopMatrix();
 }
