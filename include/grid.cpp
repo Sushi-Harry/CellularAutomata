@@ -6,12 +6,12 @@
     WRITING THIS AFTER THE NOTE ABOVE THE 3D LOGO.
     YES I WILLINGLY WASTED TIME MAKING THIS BIG 2D LOGO PURELY CAUSE IT'S PLEASING TO MY EYES
 
-    ,_______,  \--------\
-    |_|   | |   \ _____\ \
-          | |    \ \    \ \
-    ,_____|_|     \ \    \ \
-    | |_____      _\ \____\ \
-    |_|_____|     \_________/
+    ,_______,\--------\
+    \_\   | | \ _____\ \
+          | |  \ \    \ \
+    ,_____|_|   \ \    \ \
+    | |_____    _\ \____\ \
+    \_______|   \_________/
 */
 
 Grid2D::Grid2D() : _currentSize(DEFAULT_GRID_SIZE){
@@ -61,7 +61,7 @@ void Grid2D::ResizeGrid(int size){
         |__.   \     \ \    \ \
       ______\   \    _\ \____\ \
       \_________/    \_________/
-*/  
+*/
 Grid3D::Grid3D(){
     _cells.assign(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE, 0);
     _nextCells.assign(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE, 0);
