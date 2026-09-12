@@ -24,12 +24,7 @@ int main(){
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    grid.SetCellState(10, 10, 10, 1);
-    grid.SetCellState(10, 11, 10, 1);
-    grid.SetCellState(10, 12, 10, 1);
-    grid.SetCellState(11, 10, 10, 1);
-    grid.SetCellState(15, 11, 10, 1);
-    grid.SetCellState(19, 11, 10, 1);
+    grid.RandomSeed(0.05F, 69696969);
 
     while(!WindowShouldClose()){
         UpdateCamera(&camera, CAMERA_ORBITAL);

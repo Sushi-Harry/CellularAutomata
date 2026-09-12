@@ -48,6 +48,9 @@ public:
 
     const std::vector<uint8_t>& GetCells() const { return _cells; }
     const int GetSize() const { return _currentSize; }
+    void Clear();
+    void RandomSeed(float density = 0.2F, uint32_t seed = 0);
+
 private:
     std::vector<uint8_t> _cells;
     std::vector<uint8_t> _nextCells;

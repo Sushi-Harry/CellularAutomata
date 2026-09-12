@@ -1,6 +1,7 @@
 #include "grid.hpp"
 #include <iostream>
 #include <algorithm> // For some reason I keep forgetting that std::min() function blongs to this header
+#include <random>
 
 /*  
     WRITING THIS AFTER THE NOTE ABOVE THE 3D LOGO.
@@ -90,4 +91,25 @@ void Grid3D::ResizeGrid(int size){
     _currentSize = size;
     _cells = std::move(newCells);
     _nextCells.assign(_currentSize*_currentSize*_currentSize, 0);
+}
+
+void Grid3D::Clear(){
+    std::fill(_cells.begin(), _cells.end(), 0);
+    std::fill(_nextCells.begin(), _nextCells.end(), 0);
+    // Just fill the values with 0 so that every cell is dead
+}
+
+void Grid3D::RandomSeed(float density, uint32_t seed){
+    Clear();
+
+    std::mt19937 generator(seed != 0 ? seed : std::random_device{}());
+    std::bernoulli_distribution dist(density);
+
+    uint32_t total_cells = _currentSize * _currentSize * _currentSize;
+
+    for(uint32_t i = 0; i < total_cells; i++){
+        if(dist(generator)){
+            _cells[i] = 1;
+        }
+    }
 }
