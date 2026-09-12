@@ -3,18 +3,7 @@
 #include <vector>
 #include <cstdint>
 
-/*
-    Grid will have this:
-        1. A vector of cells. Need to figure out the
-        2. assuming constant grid size of 100x100 for simplicity
-        3. size of each cell = 5x5
-*/
-
-/*
-    Required Functions:
-        1. Update the cells
-
-*/
+class Rulesets3D;
 
 // DEAD STATE = 0
 // ALIVE STATE = 1
@@ -38,6 +27,12 @@ private:
     uint32_t _currentSize;
 };
 
+// This enum is for the 3D neighbourhood type
+enum class Neighbourhood3D{
+    MOORE,
+    VON_NEUMANN
+};
+
 class Grid3D{
 public:
     Grid3D();
@@ -51,8 +46,15 @@ public:
     void Clear();
     void RandomSeed(float density = 0.2F, uint32_t seed = 0);
 
+    unsigned int GetNeighbourCount(int x, int y, int z, Neighbourhood3D type) const;
+
+    void Update(const Rulesets3D& ruleset, Neighbourhood3D type);
+    
 private:
+    unsigned int GetNeighbourCount_Neumann(int x, int y, int z) const;
+    unsigned int GetNeighbourCount_Moore(int x, int y, int z) const;
+
     std::vector<uint8_t> _cells;
     std::vector<uint8_t> _nextCells;
-    uint32_t _currentSize;
+    uint32_t _currentSize = DEFAULT_GRID_SIZE;
 };

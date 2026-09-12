@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm> // For some reason I keep forgetting that std::min() function blongs to this header
 #include <random>
+#include "rulesets.hpp"
 
 /*  
     WRITING THIS AFTER THE NOTE ABOVE THE 3D LOGO.
@@ -112,4 +113,66 @@ void Grid3D::RandomSeed(float density, uint32_t seed){
             _cells[i] = 1;
         }
     }
+}
+// Again, this is for just a 6 neighbour setup (Von Neumann)
+// This is faster cause duh, but Moore's 26 neighbour system is kinda needed for most of the different rulesets I've defined in the preset enum
+unsigned int Grid3D::GetNeighbourCount_Neumann(int x, int y, int z) const {
+    int count = 0;
+
+    int countOffsets[6][3] = {
+        {-1, 0, 0}, {1, 0, 0},
+        {0, -1, 0}, {0, 1, 0},
+        {0, 0, -1}, {0, 0, 1}
+    };
+
+    for(int i = 0; i < 6; i++){
+        int nx = (x + countOffsets[i][0] + _currentSize) % _currentSize;
+        int ny = (y + countOffsets[i][1] + _currentSize) % _currentSize;
+        int nz = (z + countOffsets[i][2] + _currentSize) % _currentSize;
+        count += GetCell(nx, ny, nz);
+    }
+    return count;
+}
+
+// This is the more complicated Moore 3D neighbours looping (-1, 1)
+unsigned int Grid3D::GetNeighbourCount_Moore(int x, int y, int z) const {
+    int count = 0;
+    // Will just loop through all the surrounding cubes
+    for(int dz = -1; dz <= 1; dz++){
+        for(int dy = -1; dy <= 1; dy++){
+            for(int dx = -1; dx <= 1; dx++){
+                if (dx == 0 && dy == 0 && dz == 0) continue;
+                int nx = (x + dx + _currentSize) % _currentSize;
+                int ny = (y + dy + _currentSize) % _currentSize;
+                int nz = (z + dz + _currentSize) % _currentSize;
+
+                count += GetCell(nx, ny, nz);
+            }
+        }
+    }
+    return count;
+}
+
+unsigned int Grid3D::GetNeighbourCount(int x, int y, int z, Neighbourhood3D type) const{
+    if(type == Neighbourhood3D::MOORE)
+        return GetNeighbourCount_Moore(x, y, z);
+    
+    return GetNeighbourCount_Neumann(x, y, z);
+}
+
+void Grid3D::Update(const Rulesets3D& ruleset, Neighbourhood3D type){
+    int size = static_cast<int>(_currentSize);
+
+    for(int z = 0; z < size; z++){
+        for(int y = 0; y < size; y++){
+            for(int x = 0; x < size; x++){
+                uint32_t neighbours = GetNeighbourCount(x, y, z, type);
+                uint8_t curr_state = GetCell(x, y, z);
+
+                int index = x + size * y + size * size * z;
+                _nextCells[index] = ruleset.EvaluateState(curr_state, neighbours);
+            }
+        }
+    }
+    std::swap(_cells, _nextCells);
 }

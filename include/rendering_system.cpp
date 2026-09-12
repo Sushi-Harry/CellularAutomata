@@ -113,6 +113,8 @@ void GridRenderer3D::Draw(const Grid3D& grid){
     float floatCellSize = static_cast<float>(_cellSize);
     float halfCellSize = floatCellSize * 0.5F;
     _transforms.clear();
+
+    // You'd think that this would work right away. It ddid not work at all on the first try. {Insert like 5 or 6 relieved emojis here}
     for (uint32_t z = 0; z < size; ++z) {
         for (uint32_t y = 0; y < size; ++y) {
             for (uint32_t x = 0; x < size; ++x) {

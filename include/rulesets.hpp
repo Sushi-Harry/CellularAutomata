@@ -15,7 +15,8 @@
     | |_____    _\ \____\ \
     \_______|   \_________/
 */
-enum class RULE_PRESETS : uint8_t{
+// To Sxm Azd: Write comments above these enum entries to explain the birth and survival conditions like I did in the RULE_PRESET3D enum in this file
+enum class RULE_PRESET2D : uint8_t{
     CUSTOM,
     CONWAY,
     HIGHLIFE,
@@ -24,30 +25,9 @@ enum class RULE_PRESETS : uint8_t{
 
 class Rulesets2D{
 public:
-    virtual ~Rulesets2D() = default;
-    virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) = 0;
-    virtual std::string GetName() const = 0;
-};
-
-class ConwayRuleset : public Rulesets2D{
-public:
-
-private:
-
-};
-
-class HighLifeRuleset : public Rulesets2D{
-public:
-
-private:
-
-};
-
-class SeedsRuleset : public Rulesets2D{
-public:
-
-private:
-
+   virtual ~Rulesets2D() = default;
+   virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) = 0;
+   virtual std::string GetName() const = 0;
 };
 
 
@@ -61,6 +41,7 @@ private:
 */
 // ********************************************************************************************+
 // I can do this. I can do this. I can do this. I can do this. I can do this. I can do this.   |
+// ********************************************************************************************+
 // There was a time I met a girl of a different kind                                           |
 // We ruled the world, I thought I'd never lose her out of sight                               |
 // We were so young, I think of her now and then                                               |
@@ -76,3 +57,30 @@ private:
 // "Don't you worry, don't you worry now"                                                      |
 // ********************************************************************************************+
 
+enum class RULE_PRESET3D : uint8_t{
+    CUSTOM,
+    // B5-7 / S5-7 for life3d
+    LIFE_3D,
+    // B4-5 / S3-5 for amoeba3d
+    AMOEBA_3D,
+    // B1-3 / S (ALL) for crystal3d
+    CRYSTAL_3D,
+    // B13-14 / S11-19 for bays3d
+    BAYS_3D
+};
+
+class Rulesets3D {
+public:
+    virtual ~Rulesets3D() = default;
+    virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const = 0;
+    virtual std::string GetName() const = 0;
+};
+
+class PresetRuleset3D : public Rulesets3D{
+public:
+    PresetRuleset3D(RULE_PRESET3D type) : _type(type) {}
+    uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const override;
+    std::string GetName() const override;
+private:
+    RULE_PRESET3D _type;
+};
