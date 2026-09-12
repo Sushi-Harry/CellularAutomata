@@ -14,8 +14,8 @@ int main(){
     // Initializing the 3d grid
     Grid3D grid;
     int cellSize = 1;
-    grid.ResizeGrid(20);
-    grid.RandomSeed(0.05F, 1337);
+    grid.ResizeGrid(100);
+    grid.RandomSeed(0.2F, 1337);
 
     // Initializing the renderer for the 3d grid
     GridRenderer3D renderer3d(cellSize);

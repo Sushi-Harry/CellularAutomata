@@ -3,6 +3,7 @@
 #include <algorithm> // For some reason I keep forgetting that std::min() function blongs to this header
 #include <random>
 #include "rulesets.hpp"
+#include <omp.h>
 
 /*  
     WRITING THIS AFTER THE NOTE ABOVE THE 3D LOGO.
@@ -67,6 +68,23 @@ void Grid2D::ResizeGrid(int size){
 Grid3D::Grid3D(){
     _cells.assign(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE, 0);
     _nextCells.assign(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE, 0);
+    CalculateOffsets();
+}
+
+// This function is a part of my attempt to optimize performance for large size grid. Instead of calculating 27 offsets for every single cell in every single tick, I'll do it only when the grid is initialized or resized
+void Grid3D::CalculateOffsets(){
+    _precompMooreOffsets.clear();
+    int s = _currentSize;
+    int s2 = s * s;
+
+    for (int dz = -1; dz <= 1; ++dz) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (dx == 0 && dy == 0 && dz == 0) continue;
+                _precompMooreOffsets.push_back(dx + (dy * s) + (dz * s2));
+            }
+        }
+    }
 }
 
 void Grid3D::SetCellState(int x, int y, int z, uint8_t state){
@@ -92,6 +110,7 @@ void Grid3D::ResizeGrid(int size){
     _currentSize = size;
     _cells = std::move(newCells);
     _nextCells.assign(_currentSize*_currentSize*_currentSize, 0);
+    CalculateOffsets();
 }
 
 void Grid3D::Clear(){
@@ -163,16 +182,34 @@ unsigned int Grid3D::GetNeighbourCount(int x, int y, int z, Neighbourhood3D type
 void Grid3D::Update(const Rulesets3D& ruleset, Neighbourhood3D type){
     int size = static_cast<int>(_currentSize);
 
+    // This line is for using OpenMP for multithreading
+    #pragma omp parallel for schedule(static)
+    // Tells the compiler "Ayo, my man could you spawn some worker threads to get this done real quick?" and then optionally daps up the compiler for the love of the game.
     for(int z = 0; z < size; z++){
         for(int y = 0; y < size; y++){
             for(int x = 0; x < size; x++){
-                uint32_t neighbours = GetNeighbourCount(x, y, z, type);
-                uint8_t curr_state = GetCell(x, y, z);
-
                 int index = x + size * y + size * size * z;
+                unsigned int neighbours = 0;
+                
+                // If the cell is at the boundary, just use the slower function since I know its safe to use in that case
+                if(x == 0 || x == size - 1 || y == 0 || y == size - 1 || z == 0 || z == size - 1){
+                    neighbours = GetNeighbourCount(x, y, z, Neighbourhood3D::MOORE);
+                }else{
+                    neighbours = GetNeighboutCount_FastMoore(index);
+                }
+                uint8_t curr_state = _cells[index];
                 _nextCells[index] = ruleset.EvaluateState(curr_state, neighbours);
             }
         }
     }
     std::swap(_cells, _nextCells);
+}
+
+unsigned int Grid3D::GetNeighboutCount_FastMoore(int index) const {
+    int count = 0;
+
+    for(int offset : _precompMooreOffsets){
+        count += _cells[offset + index];
+    }
+    return count;
 }

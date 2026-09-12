@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Iinclude
+CXXFLAGS = -std=c++17 -fopenmp -Iinclude
 LDFLAGS = -Iinclude -Llib -lraylib -lopengl32 -lgdi32 -lwinmm
 
 SRCS = main.cpp $(wildcard include/*.cpp)
