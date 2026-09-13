@@ -54,10 +54,11 @@ private:
     void CalculateOffsets();
     unsigned int GetNeighbourCount_Neumann(int x, int y, int z) const;
     unsigned int GetNeighbourCount_Moore(int x, int y, int z) const;
-    unsigned int GetNeighboutCount_FastMoore(int index) const;
+    inline unsigned int GetNeighboutCount_FastMoore(int index) const;
 
     std::vector<uint8_t> _cells;
     std::vector<uint8_t> _nextCells;
     uint32_t _currentSize = DEFAULT_GRID_SIZE;
-    std::vector<int> _precompMooreOffsets;
+    // std::vector<int> _precompMooreOffsets;
+    int _precompMooreOffsets[26];
 };

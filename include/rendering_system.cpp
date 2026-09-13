@@ -142,6 +142,9 @@ void GridRenderer3D::Draw(const Grid3D& grid){
     float floatCellSize = static_cast<float>(_cellSize);
     float halfCellSize = floatCellSize * 0.5F;
     _transforms.clear();
+    if(_transforms.capacity() < size * size * size){
+        _transforms.reserve(size * size * size);
+    }
 
     // You'd think that this would work right away. It ddid not work at all on the first try. {Insert like 5 or 6 relieved emojis here}
     for (uint32_t z = 0; z < size; ++z) {
@@ -154,10 +157,14 @@ void GridRenderer3D::Draw(const Grid3D& grid){
                         z * floatCellSize + halfCellSize
                     };
                     // Scale and translate the base cube to match the correct coords in the 3d space
-                    Matrix transform = MatrixMultiply(
-                        MatrixScale(floatCellSize, floatCellSize, floatCellSize),
-                        MatrixTranslate(pos.x, pos.y, pos.z)
-                    );
+                    Matrix transform = { 0 };
+                    transform.m0 = floatCellSize;
+                    transform.m5 = floatCellSize;
+                    transform.m10 = floatCellSize;
+                    transform.m15 = 1.0F;
+                    transform.m12 = pos.x;
+                    transform.m13 = pos.y;
+                    transform.m14 = pos.z;
                     _transforms.push_back(transform);
                 }
             }
@@ -191,4 +198,51 @@ void GridRenderer3D::DrawGridLines(int gridSize){
         // Draw grid matching grid dimensions
         DrawGrid(gridSize, static_cast<float>(_cellSize));
     rlPopMatrix();
+}
+
+void GridRenderer3D::UpdateTransforms(const Grid3D& grid){
+    uint32_t size = (uint32_t)grid.GetSize();
+    float floatCellSize = static_cast<float>(_cellSize);
+    float halfCellSize = floatCellSize * 0.5F;
+
+    _transforms.clear();
+    if (_transforms.capacity() < size * size * size) {
+        _transforms.reserve(size * size * size);
+    }
+
+    for (uint32_t z = 0; z < size; ++z) {
+        for (uint32_t y = 0; y < size; ++y) {
+            for (uint32_t x = 0; x < size; ++x) {
+                if (grid.GetCell(x, y, z) == 1) {
+                    Matrix transform = { 0 };
+                    transform.m0  = floatCellSize;
+                    transform.m5  = floatCellSize;
+                    transform.m10 = floatCellSize;
+                    transform.m15 = 1.0f;
+                    transform.m12 = x * floatCellSize + halfCellSize;
+                    transform.m13 = y * floatCellSize + halfCellSize;
+                    transform.m14 = z * floatCellSize + halfCellSize;
+                    _transforms.push_back(transform);
+                }
+            }
+        }
+    }
+}
+
+void GridRenderer3D::Draw(int gridSize) {
+    if(!_transforms.empty()){
+        float floatCellSize = static_cast<float>(_cellSize);
+        float center = (gridSize * floatCellSize) * 0.5f;
+        float gridCenter[3] = { center, center, center };
+        float maxDist = center * 1.73205F;
+        
+        SetShaderValue(_cubeMaterial.shader, _locShadingMode, &_shadingMode, SHADER_UNIFORM_INT);
+        SetShaderValue(_cubeMaterial.shader, _locGridCenter, gridCenter, SHADER_UNIFORM_VEC3);
+        SetShaderValue(_cubeMaterial.shader, _locMaxDistance, &maxDist, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(_cubeMaterial.shader, _locColorStart, colorCenter, SHADER_UNIFORM_VEC3);
+        SetShaderValue(_cubeMaterial.shader, _locColorEnd, colorEdge, SHADER_UNIFORM_VEC3);
+        
+        DrawMeshInstanced(_cubeMesh, _cubeMaterial, _transforms.data(), static_cast<int>(_transforms.size()));
+    }
+    DrawGridLines(gridSize);
 }

@@ -23,6 +23,8 @@ public:
     ~GridRenderer3D();
 
     void Draw(const Grid3D& grid);
+    void Draw(int gridSize);
+    void UpdateTransforms(const Grid3D& grid);
     void DrawGridLines(int gridSize);
 
     void SetCellSize(int size) { _cellSize = size; }

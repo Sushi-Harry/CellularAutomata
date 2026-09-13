@@ -73,15 +73,14 @@ Grid3D::Grid3D(){
 
 // This function is a part of my attempt to optimize performance for large size grid. Instead of calculating 27 offsets for every single cell in every single tick, I'll do it only when the grid is initialized or resized
 void Grid3D::CalculateOffsets(){
-    _precompMooreOffsets.clear();
     int s = _currentSize;
     int s2 = s * s;
-
+    int idx = 0;
     for (int dz = -1; dz <= 1; ++dz) {
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 if (dx == 0 && dy == 0 && dz == 0) continue;
-                _precompMooreOffsets.push_back(dx + (dy * s) + (dz * s2));
+                _precompMooreOffsets[idx++] = dx + (dy * s) + (dz * s2);
             }
         }
     }
@@ -205,11 +204,14 @@ void Grid3D::Update(const Rulesets3D& ruleset, Neighbourhood3D type){
     std::swap(_cells, _nextCells);
 }
 
-unsigned int Grid3D::GetNeighboutCount_FastMoore(int index) const {
-    int count = 0;
+inline unsigned int Grid3D::GetNeighboutCount_FastMoore(int index) const {
+    const uint8_t* c = _cells.data() + index;
+    const int* o = _precompMooreOffsets;
 
-    for(int offset : _precompMooreOffsets){
-        count += _cells[offset + index];
-    }
-    return count;
+    return(
+        c[o[0]] + c[o[1]] + c[o[2]] + c[o[3]] + c[o[4]] + c[o[5]] + c[o[6]] + 
+        c[o[7]] + c[o[8]] + c[o[9]] + c[o[10]] + c[o[11]] + c[o[12]] + c[o[13]] + 
+        c[o[14]] + c[o[15]] + c[o[16]] + c[o[17]] + c[o[18]] + c[o[19]] + c[o[20]] + 
+        c[o[21]] + c[o[22]] + c[o[23]] + c[o[24]] + c[o[25]]
+    );
 }

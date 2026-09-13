@@ -4,6 +4,7 @@
 #include "rlImGui.h"
 #include <algorithm>
 #include "rulesets.hpp"
+#include <omp.h>
 
 Application3D::Application3D(const char* title) : _updateInterval(0.2F), _timeAccumulator(0.0f), _isPaused(false),
     _neighbourhood(Neighbourhood3D::MOORE), _uiGridSize(20), _uiDensity(0.2f), _uiSeed(1337), _uiPresetIndex(0), _bMin(13), _bMax(14), _sMin(11), _sMax(19)
@@ -16,6 +17,7 @@ Application3D::Application3D(const char* title) : _updateInterval(0.2F), _timeAc
 
     _grid.ResizeGrid(_uiGridSize);
     _grid.RandomSeed(_uiDensity, _uiSeed);
+    _renderer->UpdateTransforms(_grid);
 
     _activeRuleset = std::make_unique<PresetRuleset3D>(RULE_PRESET3D::LIFE_3D);
 
@@ -47,6 +49,10 @@ void Application3D::ProcessInput(){
     if (_isPaused && IsKeyPressed(KEY_N)) {
         _grid.Update(*_activeRuleset, _neighbourhood);
     }
+    if (_isPaused && IsKeyPressed(KEY_N)) {
+    _grid.Update(*_activeRuleset, _neighbourhood);
+    _renderer->UpdateTransforms(_grid); // Add this
+}
 }
 
 void Application3D::Update(){
@@ -54,10 +60,15 @@ void Application3D::Update(){
         _timeAccumulator += GetFrameTime();
         int maxTicksPerFrame = 5;
 
+       bool gridChanged = false;
         while(_timeAccumulator >= _updateInterval && maxTicksPerFrame > 0){
             _grid.Update(*_activeRuleset, _neighbourhood);
             _timeAccumulator -= _updateInterval;
             maxTicksPerFrame--;
+            gridChanged = true;
+        }
+        if (gridChanged) {
+            _renderer->UpdateTransforms(_grid);
         }
     }
 }
@@ -67,7 +78,7 @@ void Application3D::Render(){
         ClearBackground(RAYWHITE);
         
         BeginMode3D(_camera);
-            _renderer->Draw(_grid);
+            _renderer->Draw(_grid.GetSize());
         EndMode3D();
 
         rlImGuiBegin();
@@ -137,14 +148,20 @@ void Application3D::RenderGUI(){
 
     ImGui::SliderFloat("Seed Density", &_uiDensity, 0.01F, 1.0F);
     ImGui::InputInt("Seed (0 = Random)", &_uiSeed);
-    if(ImGui::Button("Generate With Given Seed")) _grid.RandomSeed(_uiDensity, _uiSeed);
+    if(ImGui::Button("Generate With Given Seed")) {
+        _grid.RandomSeed(_uiDensity, _uiSeed);
+        _renderer->UpdateTransforms(_grid);
+    }
 
     if(ImGui::Button("Generate With Random Seed")){
         _grid.RandomSeed(_uiDensity, 0);
         _uiSeed = 0;
     }
     ImGui::SameLine();
-    if(ImGui::Button("Clear Grid")) _grid.Clear();
+    if(ImGui::Button("Clear Grid")) {
+        _grid.Clear();
+        _renderer->UpdateTransforms(_grid);
+    }
 
     ImGui::Separator();
     ImGui::Text("VISUALS");
