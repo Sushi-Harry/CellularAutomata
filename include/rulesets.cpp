@@ -1,4 +1,5 @@
 #include "rulesets.hpp"
+#include <algorithm>
 
 // /33333\ DDDDDDD\
 // 33   33  DD   DD
@@ -44,11 +45,6 @@ uint8_t PresetRuleset3D::EvaluateState(uint8_t curr_state, int active_neighbour_
             return (active_neighbour_count >= 13 && active_neighbour_count <= 14) ? 1 : 0;
             break;
         }
-        case RULE_PRESET3D::CUSTOM:{
-            // TEMPORARY UNTIL I FIGURE OUT HOW TO IMPLEMENT CUSTOM RULES 
-            return curr_state;
-            break;
-        }
     }
 
     return curr_state;
@@ -80,4 +76,23 @@ std::string PresetRuleset3D::GetName() const {
     }
 
     return "UNKNOWN";
+}
+
+CustomRuleset3D::CustomRuleset3D(const std::vector<int>& birth, const std::vector<int>& survival){
+    std::fill(std::begin(_birth), std::end(_birth), false);
+    std::fill(std::begin(_survival), std::end(_survival), false);
+
+    for(int b: birth){
+        if(b >= 0 && b <= 26) _birth[b] = true;
+    }
+    for(int s: survival){
+        if(s >= 0 && s <= 26) _survival[s] = true;
+    }
+}
+
+uint8_t CustomRuleset3D::EvaluateState(uint8_t curr_state, int active_neighbour_count) const {
+    if(curr_state == 1){
+        return _survival[active_neighbour_count] ? 1 : 0;
+    }
+    return _birth[active_neighbour_count] ? 1 : 0;
 }

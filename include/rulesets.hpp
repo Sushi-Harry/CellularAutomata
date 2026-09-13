@@ -58,15 +58,16 @@ public:
 // ********************************************************************************************+
 
 enum class RULE_PRESET3D : uint8_t{
-    CUSTOM,
     // B5-7 / S5-7 for life3d
-    LIFE_3D,
+    LIFE_3D = 0,
     // B4-5 / S3-5 for amoeba3d
-    AMOEBA_3D,
+    AMOEBA_3D = 1,
     // B1-3 / S (ALL) for crystal3d
-    CRYSTAL_3D,
+    CRYSTAL_3D = 2,
     // B13-14 / S11-19 for bays3d
-    BAYS_3D
+    BAYS_3D = 3,
+    // Custom Birth and Survival Conditions
+    CUSTOM = 4,
 };
 
 class Rulesets3D {
@@ -83,4 +84,14 @@ public:
     std::string GetName() const override;
 private:
     RULE_PRESET3D _type;
+};
+
+class CustomRuleset3D : public Rulesets3D{
+public:
+    CustomRuleset3D(const std::vector<int>& birth, const std::vector<int>& survival);
+    uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const override;
+    std::string GetName() const override { return "CUSTOM"; };
+private:
+    bool _birth[27];
+    bool _survival[27];
 };

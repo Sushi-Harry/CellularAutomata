@@ -28,9 +28,20 @@ public:
     void SetCellSize(int size) { _cellSize = size; }
     int GetCellSize() const { return _cellSize; }
 
+    int _shadingMode = 0; // 0 for default (solid black), 1 for Gradient based on distance from center
+    float colorCenter[3] = { 1.0f, 1.0f, 0.0f }; // Default Yellow color
+    float colorEdge[3] = { 0.0f, 0.0f, 1.0f }; // Default Blue color
 private:
     Material _cubeMaterial;
     Mesh _cubeMesh;
     uint32_t _cellSize;
     std::vector<Matrix> _transforms;
+
+    // This is just unimportant at this point. I'm adding it cause I like the way it looks
+    // Shader uniform locations
+    int _locShadingMode;
+    int _locGridCenter;
+    int _locMaxDistance;
+    int _locColorStart;
+    int _locColorEnd;
 };

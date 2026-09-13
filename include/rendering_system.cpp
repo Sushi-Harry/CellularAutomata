@@ -53,40 +53,64 @@ void GridRenderer2D::DrawGridLines(int gridSize){
 
 static const char* INSTANCING_VS = R"(
     #version 330
-
-    // Vertex attributes
     in vec3 vertexPosition;
     in vec2 vertexTexCoord;
-    in vec3 vertexNormal;
     in vec4 vertexColor;
-
-    // Instancing attribute (4x4 matrix split across 4 vec4 attributes)
     in mat4 instanceTransform;
 
-    // Input uniforms
     uniform mat4 mvp;
-    uniform mat4 matNormal;
 
-    // Output to fragment shader
     out vec3 fragPosition;
     out vec2 fragTexCoord;
     out vec4 fragColor;
-    out vec3 fragNormal;
 
-    void main()
-    {
-        // Compute vertex position using the per-instance matrix
+    void main() {
         vec4 worldPosition = instanceTransform * vec4(vertexPosition, 1.0);
         
-        fragPosition = vec3(worldPosition);
+        // Pass the exact 3D world coordinate to the fragment shader
+        fragPosition = worldPosition.xyz; 
         fragTexCoord = vertexTexCoord;
         fragColor = vertexColor;
-        fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 0.0)));
 
-        // Final object transform
         gl_Position = mvp * worldPosition;
     }
 )";
+
+static const char* INSTANCING_FS = R"(
+    #version 330
+    in vec3 fragPosition;
+    in vec2 fragTexCoord;
+    in vec4 fragColor;
+
+    // Standard Solid Color
+    uniform vec4 colDiffuse;
+
+    // New Gradient Uniforms
+    uniform int u_shadingMode; // 0 = Solid, 1 = Gradient
+    uniform vec3 u_gridCenter;
+    uniform float u_maxDistance;
+    uniform vec3 u_colorStart; // Center color
+    uniform vec3 u_colorEnd;   // Edge color
+
+    out vec4 finalColor;
+
+    void main() {
+        if (u_shadingMode == 1) {
+            // Calculate distance from this pixel to the grid center
+            float dist = distance(fragPosition, u_gridCenter);
+            
+            // Normalize distance to a 0.0 - 1.0 scale
+            float t = clamp(dist / u_maxDistance, 0.0, 1.0);
+            
+            // Mix the two colors based on distance
+            vec3 gradColor = mix(u_colorStart, u_colorEnd, t);
+            finalColor = vec4(gradColor, 1.0);
+        } else {
+            finalColor = colDiffuse * fragColor;
+        }
+    }
+)";
+
 
 GridRenderer3D::GridRenderer3D(int cellSize, Color _activeColor) {
     _cellSize = cellSize;
@@ -95,9 +119,14 @@ GridRenderer3D::GridRenderer3D(int cellSize, Color _activeColor) {
     _cubeMaterial = LoadMaterialDefault();
     _cubeMaterial.maps[MATERIAL_MAP_DIFFUSE].color = _activeColor;
 
-    Shader instanceShader = LoadShaderFromMemory(INSTANCING_VS, nullptr);
+    Shader instanceShader = LoadShaderFromMemory(INSTANCING_VS, INSTANCING_FS);
     instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
     instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
+    _locShadingMode = GetShaderLocation(instanceShader, "u_shadingMode");
+    _locGridCenter  = GetShaderLocation(instanceShader, "u_gridCenter");
+    _locMaxDistance = GetShaderLocation(instanceShader, "u_maxDistance");
+    _locColorStart  = GetShaderLocation(instanceShader, "u_colorStart");
+    _locColorEnd    = GetShaderLocation(instanceShader, "u_colorEnd");
     _cubeMaterial.shader = instanceShader;
 
     _transforms.reserve(50000);
@@ -136,6 +165,14 @@ void GridRenderer3D::Draw(const Grid3D& grid){
     }
 
     if(!_transforms.empty()){
+        float center = (size * floatCellSize) * 0.5f;
+        float gridCenter[3] = { center, center, center };
+        float maxDist = center * 1.73205F;
+        SetShaderValue(_cubeMaterial.shader, _locShadingMode, &_shadingMode, SHADER_UNIFORM_INT);
+        SetShaderValue(_cubeMaterial.shader, _locGridCenter, gridCenter, SHADER_UNIFORM_VEC3);
+        SetShaderValue(_cubeMaterial.shader, _locMaxDistance, &maxDist, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(_cubeMaterial.shader, _locColorStart, colorCenter, SHADER_UNIFORM_VEC3);
+        SetShaderValue(_cubeMaterial.shader, _locColorEnd, colorEdge, SHADER_UNIFORM_VEC3);
         DrawMeshInstanced(_cubeMesh, _cubeMaterial, _transforms.data(), static_cast<int>(_transforms.size()));
     }
 
