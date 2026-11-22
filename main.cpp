@@ -78,7 +78,11 @@ int main(){
 
     // CloseWindow();
 
-    Application3D newApp;
-    newApp.Run();
+     Application2D app;
+    app.Run();
+
     return 0;
+   // Application3D newApp;
+   // newApp.Run();
+    //return 0;
 }

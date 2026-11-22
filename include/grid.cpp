@@ -20,6 +20,7 @@
 Grid2D::Grid2D() : _currentSize(DEFAULT_GRID_SIZE){
     _cells.assign(DEFAULT_GRID_SIZE*DEFAULT_GRID_SIZE, 0);
     _nextCells.assign(DEFAULT_GRID_SIZE*DEFAULT_GRID_SIZE, 0);
+    calcOffsets();
 
 }
 
@@ -52,6 +53,95 @@ void Grid2D::ResizeGrid(int size){
     _currentSize = size;
     _cells = std::move(newCells);
     _nextCells.assign(_currentSize*_currentSize, 0);
+    calcOffsets();
+}
+
+void Grid2D::Clear(){
+    std::fill(_cells.begin(), _cells.end(), 0);
+    std::fill(_nextCells.begin(), _nextCells.end(), 0);
+}
+
+void Grid2D::calcOffsets(){
+    int size = GetSize(); // Current grid size
+    int idx = 0;
+    // loop from -1 to +1 for x and y offsets
+    for(int i = -1; i <= 1; i++){
+        for(int j = -1; j <= 1; j++){
+            if(i == 0 && j == 0) continue;
+            _precomputedOffsets[idx++] = i + size * j;
+        }
+    }
+}
+void Grid2D::RandomSeed(float density, uint32_t seed){
+    Clear();
+
+    // Same idea as the 3D version. Give each cell a chance to be alive
+    std::mt19937 generator(seed != 0 ? seed : std::random_device{}());
+    std::bernoulli_distribution dist(density);
+
+    uint32_t total_cells = _currentSize * _currentSize;
+
+    for(uint32_t i = 0; i < total_cells; i++){
+        if(dist(generator)){
+            _cells[i] = 1;
+        }
+    }
+}
+
+// Moore neighbourhood in 2D means the 8 cells surrounding the current cell
+unsigned int Grid2D::GetNeighbourCount(int x, int y) const {
+    int count = 0;
+    int size = static_cast<int>(_currentSize);
+
+    for(int dy = -1; dy <= 1; dy++){
+        for(int dx = -1; dx <= 1; dx++){
+            if(dx == 0 && dy == 0) continue;
+
+            // Walk off one edge and come back from the opposite edge
+            int nx = (x + dx + size) % size;
+            int ny = (y + dy + size) % size;
+
+            count += GetCell(nx, ny);
+        }
+    }
+    return count;
+}
+
+// These offsets are already calculated, so no need to do all that modulo work again
+inline unsigned int Grid2D::GetNeighbourCount_FastMoore(int index) const {
+    const uint8_t* c = _cells.data() + index;
+    const int* o = _precomputedOffsets;
+
+    return(
+        c[o[0]] + c[o[1]] + c[o[2]] + c[o[3]] +
+        c[o[4]] + c[o[5]] + c[o[6]] + c[o[7]]
+    );
+}
+
+void Grid2D::Update(const Rulesets2D& ruleset){
+    int size = static_cast<int>(_currentSize);
+
+    // Same worker thread setup as the 3D grid, just splitting up rows this time
+    #pragma omp parallel for schedule(static)
+    for(int y = 0; y < size; y++){
+        for(int x = 0; x < size; x++){
+            int index = x + size * y;
+            unsigned int neighbours = 0;
+
+            // The fast offsets can't wrap around edges, so let the safe function handle those
+            if(x == 0 || x == size - 1 || y == 0 || y == size - 1){
+                neighbours = GetNeighbourCount(x, y);
+            }else{
+                neighbours = GetNeighbourCount_FastMoore(index);
+            }
+
+            uint8_t curr_state = _cells[index];
+            _nextCells[index] = ruleset.EvaluateState(curr_state, neighbours);
+        }
+    }
+
+    // Everyone has finished their turn. The next generation becomes the current one
+    std::swap(_cells, _nextCells);
 }
 
 // Here's a little note I'm leaving just in case anyone expects this is AI.

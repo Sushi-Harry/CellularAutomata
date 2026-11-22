@@ -16,17 +16,51 @@
     \_______|   \_________/
 */
 // To Sxm Azd: Write comments above these enum entries to explain the birth and survival conditions like I did in the RULE_PRESET3D enum in this file
-enum class RULE_PRESET2D : uint8_t{
-    CUSTOM,
-    CONWAY,
-    HIGHLIFE,
-    SEEDS
+
+// Any Life-like rule in B/S notation, e.g. B3/S23.
+
+class Rulesets2D{
+public:
+   virtual ~Rulesets2D() = default;
+   virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const = 0;
+   virtual std::string GetName() const = 0;
+};
+class CustomRuleset2D : public Rulesets2D {
+public:
+    CustomRuleset2D(const std::vector<int>& birth, const std::vector<int>& survival);
+
+    uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const override;
+    std::string GetName() const override;  // returns e.g. "B36/S23"
+
+private:
+    uint16_t _birth = 0;     // bit n set => dead cell with n neighbours is born
+    uint16_t _survival = 0;  // bit n set => live cell with n neighbours survives
+};
+
+enum class RULE_PRESET2D : uint8_t {
+    // B3 / S2-3 for life2d
+    LIFE_2D = 0,
+    // B3,6 / S2-3 for highlife2d
+    HIGHLIFE_2D = 1,
+    // B2 / S (NONE) for seeds2d
+    SEEDS_2D = 2,
+};
+
+class PresetRuleset2D : public CustomRuleset2D {
+public:
+    explicit PresetRuleset2D(RULE_PRESET2D type);
+
+    std::string GetName() const override;
+    RULE_PRESET2D GetType() const { return _type; }
+
+private:
+    RULE_PRESET2D _type;
 };
 
 class Rulesets2D{
 public:
    virtual ~Rulesets2D() = default;
-   virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) = 0;
+   virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const = 0;
    virtual std::string GetName() const = 0;
 };
 

@@ -1,11 +1,88 @@
 #include "rulesets.hpp"
 #include <algorithm>
+#include <stdexcept>
 
 // /33333\ DDDDDDD\
 // 33   33  DD   DD
 //    <33<  DD   DD
 // 33   33  DD   DD
 // \33333/ DDDDDDD/
+
+
+
+
+namespace {
+
+std::vector<int> PresetBirth(RULE_PRESET2D type) {
+    switch (type) {
+        case RULE_PRESET2D::LIFE_2D:     return {3};
+        case RULE_PRESET2D::HIGHLIFE_2D: return {3, 6};
+        case RULE_PRESET2D::SEEDS_2D:    return {2};
+    }
+    throw std::invalid_argument("Unknown RULE_PRESET2D");
+}
+
+std::vector<int> PresetSurvival(RULE_PRESET2D type) {
+    switch (type) {
+        case RULE_PRESET2D::LIFE_2D:     return {2, 3};
+        case RULE_PRESET2D::HIGHLIFE_2D: return {2, 3};
+        case RULE_PRESET2D::SEEDS_2D:    return {};
+    }
+    throw std::invalid_argument("Unknown RULE_PRESET2D");
+}
+
+}  // namespace
+
+// ---------------- CustomRuleset2D ----------------
+
+CustomRuleset2D::CustomRuleset2D(const std::vector<int>& birth,
+                                 const std::vector<int>& survival) {
+    for (int b : birth) {
+        if (b < 0 || b > 8)
+            throw std::invalid_argument("Birth count must be in [0, 8]");
+        _birth |= static_cast<uint16_t>(1u << b);
+    }
+
+    for (int s : survival) {
+        if (s < 0 || s > 8)
+            throw std::invalid_argument("Survival count must be in [0, 8]");
+        _survival |= static_cast<uint16_t>(1u << s);
+    }
+}
+
+uint8_t CustomRuleset2D::EvaluateState(uint8_t curr_state, int active_neighbour_count) const {
+    if (active_neighbour_count < 0 || active_neighbour_count > 8)
+        return 0;
+
+    const uint16_t mask = (curr_state != 0) ? _survival : _birth;
+    return static_cast<uint8_t>((mask >> active_neighbour_count) & 1u);
+}
+
+std::string CustomRuleset2D::GetName() const {
+    std::string name = "B";
+    for (int n = 0; n <= 8; ++n)
+        if (_birth & (1u << n)) name += static_cast<char>('0' + n);
+
+    name += "/S";
+    for (int n = 0; n <= 8; ++n)
+        if (_survival & (1u << n)) name += static_cast<char>('0' + n);
+
+    return name;
+}
+
+// ---------------- PresetRuleset2D ----------------
+
+PresetRuleset2D::PresetRuleset2D(RULE_PRESET2D type)
+    : CustomRuleset2D(PresetBirth(type), PresetSurvival(type)), _type(type) {}
+
+std::string PresetRuleset2D::GetName() const {
+    switch (_type) {
+        case RULE_PRESET2D::LIFE_2D:     return "LIFE_2D";
+        case RULE_PRESET2D::HIGHLIFE_2D: return "HIGHLIFE_2D";
+        case RULE_PRESET2D::SEEDS_2D:    return "SEEDS_2D";
+    }
+    return "UNKNOWN";
+}
 
 uint8_t PresetRuleset3D::EvaluateState(uint8_t curr_state, int active_neighbour_count) const{
     switch(_type){
@@ -96,3 +173,4 @@ uint8_t CustomRuleset3D::EvaluateState(uint8_t curr_state, int active_neighbour_
     }
     return _birth[active_neighbour_count] ? 1 : 0;
 }
+

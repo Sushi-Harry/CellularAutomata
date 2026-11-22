@@ -6,6 +6,199 @@
 #include "rulesets.hpp"
 #include <omp.h>
 
+
+
+namespace {
+
+constexpr int kWindowSize = 900;
+constexpr int kTargetFps = 60;
+constexpr int kCellSizePx = 5;
+constexpr int kMaxTicksPerFrame = 5;
+
+// Order must match the RULE_PRESET2D values (0, 1, 2). "Custom" must stay last.
+const char* const kPresetNames[] = {"Life2D", "HighLife2D", "Seeds2D", "Custom"};
+constexpr int kPresetCount = IM_ARRAYSIZE(kPresetNames);
+constexpr int kCustomIndex = kPresetCount - 1;
+
+}  // namespace
+
+// ---------------- Lifetime ----------------
+
+Application2D::Application2D(const char* title) {
+    InitWindow(kWindowSize, kWindowSize, title);
+    SetTargetFPS(kTargetFps);
+    rlImGuiSetup(true);
+
+    _renderer = std::make_unique<GridRenderer2D>(kCellSizePx);
+
+    _grid.ResizeGrid(_uiGridSize);
+    _grid.RandomSeed(_uiDensity, _uiSeed);
+
+    SelectPreset(_uiPresetIndex);
+}
+
+Application2D::~Application2D() {
+    _renderer.reset();  // free GPU resources while the window still exists
+    rlImGuiShutdown();
+    CloseWindow();
+}
+
+// ---------------- Main loop ----------------
+
+void Application2D::Run() {
+    while (!WindowShouldClose()) {
+        ProcessInput();
+        Update();
+        Render();
+    }
+}
+
+void Application2D::ProcessInput() {
+    // Don't steal keys while the user is typing in a text box (e.g. the seed).
+    if (ImGui::GetIO().WantTextInput)
+        return;
+
+    if (IsKeyPressed(KEY_SPACE))
+        _isPaused = !_isPaused;
+
+    if (_isPaused && IsKeyPressed(KEY_N))
+        StepOnce();
+}
+
+void Application2D::Update() {
+    if (_isPaused)
+        return;
+
+    _timeAccumulator += GetFrameTime();
+
+    int ticks = 0;
+    while (_timeAccumulator >= _updateInterval && ticks < kMaxTicksPerFrame) {
+        StepOnce();
+        _timeAccumulator -= _updateInterval;
+        ++ticks;
+    }
+
+    // Hit the cap with time still owed: discard it so the backlog can't grow forever.
+    if (_timeAccumulator >= _updateInterval)
+        _timeAccumulator = 0.0f;
+}
+
+void Application2D::Render() {
+    BeginDrawing();
+    ClearBackground(BLACK);  // remove if GridRenderer2D::Draw already clears
+
+    _renderer->Draw(_grid);
+
+    rlImGuiBegin();
+    RenderGUI();
+    rlImGuiEnd();
+
+    EndDrawing();
+}
+
+// ---------------- GUI ----------------
+
+void Application2D::RenderGUI() {
+    ImGui::Begin("2D CONTROLS");
+
+    DrawPlaybackControls();
+    ImGui::Separator();
+    DrawRulesetControls();
+    ImGui::Separator();
+    DrawGridControls();
+
+    ImGui::End();
+}
+
+void Application2D::DrawPlaybackControls() {
+    ImGui::Text("FPS: %d", GetFPS());
+    ImGui::Separator();
+
+    if (ImGui::Button(_isPaused ? "Resume" : "Pause"))
+        _isPaused = !_isPaused;
+
+    ImGui::SameLine();
+
+    ImGui::BeginDisabled(!_isPaused);  // greyed out while running
+    if (ImGui::Button("Step 1 Tick (N)"))
+        StepOnce();
+    ImGui::EndDisabled();
+
+    ImGui::SliderFloat("Tick Interval", &_updateInterval, 0.01f, 1.0f, "%.2f s");
+}
+
+void Application2D::DrawRulesetControls() {
+    if (ImGui::Combo("Ruleset", &_uiPresetIndex, kPresetNames, kPresetCount))
+        SelectPreset(_uiPresetIndex);
+
+    if (_uiPresetIndex != kCustomIndex)
+        return;
+
+    ImGui::Indent();
+    ImGui::TextUnformatted("Custom Ruleset (Birth / Survival)");
+
+    // DragIntRange2 keeps min <= max by itself and returns true when either changes.
+    bool changed = false;
+    changed |= ImGui::DragIntRange2("Birth", &_bMin, &_bMax, 0.1f, 0, 8, "Min: %d", "Max: %d");
+    changed |= ImGui::DragIntRange2("Survival", &_sMin, &_sMax, 0.1f, 0, 8, "Min: %d", "Max: %d");
+
+    if (changed)
+        ApplyCustomRule();
+
+    ImGui::Unindent();
+}
+
+void Application2D::DrawGridControls() {
+    ImGui::SliderInt("Grid Size", &_uiGridSize, 10, 100);
+
+    if (ImGui::Button("Apply New Dimensions"))
+        _grid.ResizeGrid(_uiGridSize);
+
+    ImGui::SliderFloat("Seed Density", &_uiDensity, 0.01f, 1.0f);
+    ImGui::InputInt("Seed (0 = Random)", &_uiSeed);
+
+    if (ImGui::Button("Generate With Given Seed"))
+        _grid.RandomSeed(_uiDensity, _uiSeed);
+
+    if (ImGui::Button("Generate With Random Seed")) {
+        _grid.RandomSeed(_uiDensity, 0);
+        _uiSeed = 0;
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Clear Grid"))
+        _grid.Clear();
+}
+
+// ---------------- Actions ----------------
+
+void Application2D::StepOnce() {
+    _grid.Update(*_activeRuleset);
+}
+
+void Application2D::SelectPreset(int index) {
+    if (index == kCustomIndex) {
+        ApplyCustomRule();
+        return;
+    }
+
+    // Combo order == enum values, so the index can be cast directly.
+    _activeRuleset = std::make_unique<PresetRuleset2D>(static_cast<RULE_PRESET2D>(index));
+}
+
+void Application2D::ApplyCustomRule() {
+    std::vector<int> birth, survival;
+
+    for (int n = _bMin; n <= _bMax; ++n)
+        birth.push_back(n);
+
+    for (int n = _sMin; n <= _sMax; ++n)
+        survival.push_back(n);
+
+    _activeRuleset = std::make_unique<CustomRuleset2D>(birth, survival);
+}
+
 Application3D::Application3D(const char* title) : _updateInterval(0.2F), _timeAccumulator(0.0f), _isPaused(false),
     _neighbourhood(Neighbourhood3D::MOORE), _uiGridSize(20), _uiDensity(0.2f), _uiSeed(1337), _uiPresetIndex(0), _bMin(13), _bMax(14), _sMin(11), _sMax(19)
 {
