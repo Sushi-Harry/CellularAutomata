@@ -48,11 +48,8 @@ void Application3D::ProcessInput(){
     if (IsKeyPressed(KEY_SPACE)) _isPaused = !_isPaused;
     if (_isPaused && IsKeyPressed(KEY_N)) {
         _grid.Update(*_activeRuleset, _neighbourhood);
+        _renderer->UpdateTransforms(_grid);
     }
-    if (_isPaused && IsKeyPressed(KEY_N)) {
-    _grid.Update(*_activeRuleset, _neighbourhood);
-    _renderer->UpdateTransforms(_grid); // Add this
-}
 }
 
 void Application3D::Update(){
