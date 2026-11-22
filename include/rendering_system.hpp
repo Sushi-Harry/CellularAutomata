@@ -5,7 +5,7 @@
 
 class GridRenderer2D{
 public:
-    GridRenderer2D(int cellSize = DEFAULT_CELL_SIZE) : _cellSize(cellSize) {}
+    GridRenderer2D(int _width);
 
     void Draw(const Grid2D& grid);
     void DrawGridLines(int gridSize);

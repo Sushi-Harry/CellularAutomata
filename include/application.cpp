@@ -29,7 +29,7 @@ Application2D::Application2D(const char* title) {
     SetTargetFPS(kTargetFps);
     rlImGuiSetup(true);
 
-    _renderer = std::make_unique<GridRenderer2D>(kCellSizePx);
+    _renderer = std::make_unique<GridRenderer2D>(kWindowSize);
 
     _grid.ResizeGrid(_uiGridSize);
     _grid.RandomSeed(_uiDensity, _uiSeed);
@@ -241,11 +241,8 @@ void Application3D::ProcessInput(){
     if (IsKeyPressed(KEY_SPACE)) _isPaused = !_isPaused;
     if (_isPaused && IsKeyPressed(KEY_N)) {
         _grid.Update(*_activeRuleset, _neighbourhood);
+        _renderer->UpdateTransforms(_grid);
     }
-    if (_isPaused && IsKeyPressed(KEY_N)) {
-    _grid.Update(*_activeRuleset, _neighbourhood);
-    _renderer->UpdateTransforms(_grid); // Add this
-}
 }
 
 void Application3D::Update(){

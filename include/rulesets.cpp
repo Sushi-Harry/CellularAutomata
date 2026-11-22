@@ -8,9 +8,6 @@
 // 33   33  DD   DD
 // \33333/ DDDDDDD/
 
-
-
-
 namespace {
 
 std::vector<int> PresetBirth(RULE_PRESET2D type) {

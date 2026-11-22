@@ -17,14 +17,14 @@
 */
 // To Sxm Azd: Write comments above these enum entries to explain the birth and survival conditions like I did in the RULE_PRESET3D enum in this file
 
-// Any Life-like rule in B/S notation, e.g. B3/S23.
-
 class Rulesets2D{
 public:
    virtual ~Rulesets2D() = default;
    virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const = 0;
    virtual std::string GetName() const = 0;
 };
+
+// Any Life-like rule in B/S notation, e.g. B3/S23.
 class CustomRuleset2D : public Rulesets2D {
 public:
     CustomRuleset2D(const std::vector<int>& birth, const std::vector<int>& survival);
@@ -55,13 +55,6 @@ public:
 
 private:
     RULE_PRESET2D _type;
-};
-
-class Rulesets2D{
-public:
-   virtual ~Rulesets2D() = default;
-   virtual uint8_t EvaluateState(uint8_t curr_state, int active_neighbour_count) const = 0;
-   virtual std::string GetName() const = 0;
 };
 
 

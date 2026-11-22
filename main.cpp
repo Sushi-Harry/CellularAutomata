@@ -1,88 +1,65 @@
 #include "application.hpp"
+#include "imgui.h"
+#include "rlImGui.h"
 
 /*
     ONLY TEST CODE IN THE MAIN FILE RIGHT NOW. I'll write the application file after all the features have been added and verified to be working
 */
 
+enum class AppMode {
+    None,
+    MODE_3D,
+    MODE_2D
+};
+
+AppMode showStartupLauncher(){
+    InitWindow(400, 200, "Startup Launcher");
+    SetTargetFPS(60);
+    rlImGuiSetup(true);
+
+    AppMode chosenMode = AppMode::None;
+    int selectedIndex = 0;
+    const char* options[] = { "Option 1: 3D Mode", "Option 2: 2D Mode" };
+
+    while (!WindowShouldClose() && chosenMode == AppMode::None) {
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+
+        rlImGuiBegin();
+
+        // Make the ImGui window fill the entire Raylib launcher window
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2((float)GetScreenWidth(), (float)GetScreenHeight()));
+        ImGui::Begin("Select:", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
+        ImGui::Spacing();
+        ImGui::Combo("##ModeSelect", &selectedIndex, options, IM_ARRAYSIZE(options));
+        ImGui::Spacing();
+        if (ImGui::Button("Confirm & Launch", ImVec2(-1, 35))) {
+            chosenMode = (selectedIndex == 0) ? AppMode::MODE_3D : AppMode::MODE_2D;
+        }
+        ImGui::End();
+        rlImGuiEnd();
+        EndDrawing();
+    }
+    rlImGuiShutdown();
+    CloseWindow();
+
+    return chosenMode;
+}
+
 int main(){
-    // InitWindow(800, 800, "Cellular Automata 2D Test");
-    // SetTargetFPS(60);
+    AppMode selected = showStartupLauncher();
+    if (selected == AppMode::None) {
+        return 0;
+    }
 
-    // // Initializing the 3d grid
-    // Grid3D grid;
-    // int cellSize = 1;
-    // grid.ResizeGrid(100);
-    // grid.RandomSeed(0.2F, 1337);
-
-    // // Initializing the renderer for the 3d grid
-    // GridRenderer3D renderer3d(cellSize);
-    
-    // //Initializing a ruleset
-    // PresetRuleset3D life3d(RULE_PRESET3D::LIFE_3D);
-
-    // // CAMERA SETUP - DO NOT TOUCH IT - THIS IS PERFECT AS IS
-    // Camera3D camera = { 0 };
-    // float gridCenter = (grid.GetSize() * cellSize) * 0.5F;
-    // camera.position = (Vector3){ gridCenter + 80.0f, gridCenter + 80.0f, gridCenter + 120.0f };
-    // camera.target = (Vector3){ gridCenter, gridCenter, gridCenter };
-    // camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    // camera.fovy = 45.0f;
-    // camera.projection = CAMERA_PERSPECTIVE;
-
-    // // Timing Variables
-    // float updateInterval = 0.2F; // (0.2 seconds per tick. => 5 ticks per second)
-    // float timeAccumulator = 0.0F;
-    // bool isPaused = true;
-
-    // while(!WindowShouldClose()){
-    //     UpdateCamera(&camera, CAMERA_ORBITAL);
-
-    //     // Speed controls
-    //     if (IsKeyPressed(KEY_UP)) updateInterval = std::max(0.02f, updateInterval - 0.05f);
-    //     if (IsKeyPressed(KEY_DOWN)) updateInterval += 0.05f;
-    //     // Manual step when paused
-    //     if (isPaused && IsKeyPressed(KEY_N)) {
-    //         grid.Update(life3d, Neighbourhood3D::MOORE);
-    //     }
-    //     // Pause / Resume control
-    //     if (IsKeyPressed(KEY_SPACE)) isPaused = !isPaused;
-    //     // Random Grid Generation
-    //     if(IsKeyPressed(KEY_R)) grid.RandomSeed(0.05F);
-
-    //     // Simulation code
-    //     if (!isPaused) {
-    //         timeAccumulator += GetFrameTime();
-    //         int maxTicksPerFrame = 5;
-    //         while (timeAccumulator >= updateInterval && maxTicksPerFrame > 0) {
-    //             grid.Update(life3d, Neighbourhood3D::MOORE);
-    //             timeAccumulator -= updateInterval;
-    //             maxTicksPerFrame--;
-    //         }
-    //     }
-
-    //     BeginDrawing();
-    //         ClearBackground(RAYWHITE);
-    //         BeginMode3D(camera);
-    //             renderer3d.Draw(grid);
-    //         EndMode3D();
-
-    //         if (isPaused) {
-    //             DrawText("Press 'N' to advance 1 step", 10, 110, 18, RED);
-    //         }
-    //         DrawText(TextFormat("Simulation: %s (SPACE to toggle)", isPaused ? "PAUSED" : "RUNNING"), 10, 35, 18, DARKGREEN);
-    //         DrawText(TextFormat("Tick Speed: %.2F sec/tick (UP / DOWN to change)", updateInterval), 10, 60, 18, DARKGREEN);
-    //         DrawText("Press R to Randomize the current grid", 10, 85, 18, DARKGREEN);
-    //         DrawFPS(10, 10);
-    //     EndDrawing();
-    // }
-
-    // CloseWindow();
-
-     Application2D app;
-    app.Run();
+    if(selected == AppMode::MODE_3D){
+        Application3D newApp;
+        newApp.Run();
+    }else{
+        Application2D newApp;
+        newApp.Run();
+    }
 
     return 0;
-   // Application3D newApp;
-   // newApp.Run();
-    //return 0;
 }

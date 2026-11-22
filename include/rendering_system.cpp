@@ -10,6 +10,10 @@
     \_______|   \_________/
 */
 
+GridRenderer2D::GridRenderer2D(int _width){
+    _cellSize = _width / 100;
+}
+
 void GridRenderer2D::Draw(const Grid2D& grid){
     uint32_t size = (uint32_t)grid.GetSize();
 
